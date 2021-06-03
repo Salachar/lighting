@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>GM Kit</title>
+        <link rel="stylesheet" href="./style.css"></link>
+    </head>
+
+    <body>
+        <div id="root">
+            <div class="slides_wrapper">
+                <div class="slides_header">
+                    <div id="slides_back">&#10151;</div>
+                    <div id="slides_title"></div>
+                    <div id="slides_forward">&#10151;</div>
+                </div>
+                <div id="slides"></div>
+            </div>
+        </div>
+    </body>
+
+
+<template id="1">
+<p>The CANVAS!</p>
+<p>
+The canvas is the backbone of this whole
+thing, and we'll be using the 2D context instead of WebGL.
+</p>
+<pre>
+const canvas = document.createElement('canvas');
+const context = canvas.getContext('2d');
+document.body.appendChild(canvas);
+</pre>
+<p>
+We're now ready to draw the image to the canvas. The canvas needs a javascript
+image instance to draw, so we'll need to make that first. After the image loads
+we'll use it's dimensions to resize the canvas.
+</p>
+<pre>
+const img = new Image;
+img.onload = () => {
+    const width = img.naturalWidth;
+    const height = img.naturalHeight;
+
+    canvas.setAttribute('width', width);
+    canvas.setAttribute('height', height);
+    canvas.style.width = width + 'px';
+    canvas.style.height = height + 'px';
+
+    context.drawImage(img, 0, 0, width, height);
+}
+img.src = 'graph.png';
+</pre>
+<p>
+The width and height of a canvas can be accurately pulled from
+it's context. This is handy when clearing a context before drawing.
+</p>
+<pre>
+const width = context.canvas.width || context.canvas.clientWidth || 0;
+const height = context.canvas.height || context.canvas.clientHeight || 0;
+</pre>
+</template>
+
+
+<template id="4">
+<p>
+Canvas layers are something that we'll be using throughout, with future slides
+mentioning when we're creating a new one.
+</p>
+<p>
+Canvas layers should stacked on top of each other, using whichever method you want.
+I tend to stick to positioning them absolute inside of a wrapper, and using z-index to layer them.
+Each time a new layer is added, the order will be explicitly called out.
+</p>
+<p class="note">
+NOTE: Each added layer will be the same size, and they should all be resized after the image loads.
+</p>
+<pre>
+.wrapper {
+    position: relative;
+    width: *some width*
+    height: *some height*;
+    overflow: scroll;
+}
+
+// target all canvases, these will be in the .wrapper div
+canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    background: transparent;
+}
+
+.image_canvas {
+    z-index: 0;
+}
+// Mentioned in the next few slides
+.wall_canvas {
+    z-index: 1;
+}
+</pre>
+<p>I'll also be using a helper for clearing the context in future examples.</p>
+<pre>
+function clear (context) {
+    context.clearRect(0, 0, context.width, context.height);
+}
+</pre>
+</template>
+
+
+<template id="2">
+<p>
+Now we need to add some walls. We'll start by creating an array
+to hold our wall objects. The below is just a sample, every other wall will
+be included using the same structure.
+</p>
+<pre>
+const walls = [
+    {
+        "p1": {
+            "x": 217,
+            "y": 138,
+        },
+        "p2": {
+            "x": 217,
+            "y": 430,
+        },
+    },
+];
+</pre>
+<p>
+Now we want to draw them so we can see them on the screen.
+We'll use another canvas layer to draw the walls on, the order of the canvases
+should be as follows: (left/lowest -> right/highest)
+<br /><br /><b>IMAGE -> WALL</b><br />
+</p>
+<pre>
+walls.forEach((wall) => {
+    const context = wall_context;
+    context.save();
+        context.beginPath();
+        context.moveTo(wall.p1.x, wall.p1.y);
+        context.lineTo(wall.p2.x, wall.p2.y);
+        context.strokeStyle = '#000000';
+        context.lineWidth = 1;
+        context.stroke();
+    context.restore();
+});
+</pre>
+</template>
+
+
+<template id="3">
+<p>
+Now it's time to start working on the lighting implementation. We'll do lighting
+by taking a point (the light source) and casting rays equally in all directions around it
+to check for intersections with walls.
+</p>
+<p>
+For this slide, we'll just worry about getting the unit vectors set up that we'll
+use for casting from a light. They'll be the same for every light and won't change, so we can pre-calculate them.
+</p>
+<pre>
+// The light fidelity
+const angle_amount = 90;
+// The angle between each ray the light casts out
+const angle_increment = (Math.PI * 2) / angle_amount;
+// Array of unit vectors
+const angle_lookup = [];
+
+for (let i = 0; i < angle_amount; ++i) {
+    const angle = i * angle_increment;
+    const vec_x = Math.cos(angle);
+    const vec_y = Math.sin(angle);
+    angle_lookup.push({
+        x : vec_x,
+        y : vec_y
+    });
+}
+</pre>
+<p>
+It's also best to go over the newly created vectors and polish some of them up.
+Near vertical/horizontal vectors can have some crazy small values that can affect
+some of the calculations.
+</p>
+<pre>
+for (let i = 0; i < angle_lookup.length; ++i) {
+    let angle = angle_lookup[i];
+    if (angle.x < 0.000001 && angle.x > -0.000001) {
+        angle.x = 0;
+    }
+    if (angle.x > 0.999999 && angle.x < 1.000001) {
+        angle.x = 1;
+    }
+    if (angle.x < -0.999999 && angle.x > -1.000001) {
+        angle.x = -1;
+    }
+    if (angle.y < 0.000001 && angle.y > -0.000001) {
+        angle.y = 0;
+    }
+    if (angle.y > 0.999999 && angle.y < 1.000001) {
+        angle.y = 1;
+    }
+    if (angle.y < -0.999999 && angle.y > -1.000001) {
+        angle.y = -1;
+    }
+}
+</pre>
+</template>
+
+
+<template id="5">
+<p>
+Time to draw the rays being cast from the light, we'll use the mouse position
+on the canvas as the light source.
+</p>
+<p>
+We're going to use another canvas layer for this.
+The lights will move around a lot and we don't want to redraw the background image or
+walls everytime the light moves. I call this canvas the control canvas and it sits above every canvas we're going
+to add. Mainly used for hooking up mouse events, we'll also be drawing our debug output to
+it. Here we'll be drawing the light rays coming off of our light source.
+<br /><br /><b>IMAGE -> WALL -> CONTROL</b><br />
+</p>
+<pre>
+control_canvas.addEventListener('mousemove', (e) => {
+    // Get the position of the canvas in the window
+    const rect = control_canvas.canvas.getBoundingClientRect();
+    // e.clientX is relative to the window not the canvas
+    // subtracting the canvas position gives a mouse
+    // x and y coordinate relative to the canvas.
+    const pos = {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+    };
+
+    draw();
+});
+
+function draw (pos) {
+    drawLightRays(pos, angle_lookup);
+}
+</pre>
+<p>
+The drawing for this is extremely similar to the drawing we did for walls.
+Almost all of the drawing that we'll be doing is either
+singular lines or several connected lines to create a polygon.
+</p>
+<pre>
+// light is the mouse position
+// rays is the angle_lookup array we created earlier
+function drawLightRays (light, rays) {
+    const context = control_context;
+    // Clear all previous drawing off the canvas
+    clear(context);
+
+    for (let i = 0; i < rays.length; ++i) {
+        context.save();
+            context.beginPath();
+            context.moveTo(light.x, light.y);
+            // The unit vector is super short, so multiply it by
+            // 10000 to make sure there is an appreciable line to draw
+            // Then add it to the light source to get our casted point
+            context.lineTo(
+                light.x + (rays[i].x * 10000),
+                light.y + (rays[i].y * 10000),
+            );
+            context.strokeStyle = '#000000';
+            context.lineWidth = 1;
+            context.stroke();
+        context.restore();
+    }
+}
+</pre>
+</template>
+
+
+<template id="6">
+<p>
+Now it's time to add some wall intersection to our light rays. It's fairly straightforward
+and uses some horrible looking math.
+</p>
+<pre>
+function getIntersection (r, s) {
+    if ((r.dx / r.dy) == (s.dx / s.dy)) return null;
+
+    const t2 = (r.dx * (s.py - r.py) + r.dy * (r.px - s.px)) / (s.dx * r.dy - s.dy * r.dx);
+    const t1 = (r.dx != 0) ? (s.px + s.dx * t2 - r.px) / r.dx : (s.py + s.dy * t2 - r.py) / r.dy;
+
+    return {
+        x: r.px + (t1 * r.dx),
+        y: r.py + (t1 * r.dy),
+        t2: t2,
+        t1: t1
+    };
+}
+</pre>
+<p>
+I call the function <code>getLightPolygon</code> because the list of intersect points returned will be connected
+to create a polygon that represents the lit up area.
+</p>
+<pre>
+function getLightPolygon (light) {
+    // Holds our intersect points that we find for each light ray
+    let intersects = [];
+
+    for (let angle_i = 0; angle_i < angle_lookup.length; ++angle_i) {
+        const vector = angle_lookup[angle_i];
+        const r = {
+            px : light.x,
+            py : light.y,
+            dx : vector.x,
+            dy : vector.y
+        };
+
+        let closestPoint = {
+            x : null,
+            y : null,
+            t1 : null
+        };
+
+        // Go through all of the segments returned for that light/angle quadrant matchup
+        for (let w = 0; w < walls.length; ++w) {
+            // This will accessed a lot so I'm going with a short variable name
+            // "s" in this instance stands for segment
+            const s = walls[s_index];
+
+            // Get any intersection info for this light ray and wall.
+            const info = getIntersection(r, {
+                px : s.temp_p1 ? s.temp_p1.x : s.p1.x,
+                py : s.temp_p1 ? s.temp_p1.y : s.p1.y,
+                dx : (s.temp_p2 ? s.temp_p2.x : s.p2.x) - (s.temp_p1 ? s.temp_p1.x : s.p1.x),
+                dy : (s.temp_p2 ? s.temp_p2.y : s.p2.y) - (s.temp_p1 ? s.temp_p1.y : s.p1.y)
+            });
+
+            // Continue to the next wall if there was no intersect info.
+            if (!info) continue;
+
+            // If there was intersect info, check if the intersected wall is
+            // closer than any previously found wall.
+            if (info.t1 >= 0 && info.t2 >= 0 && info.t2 <= 1) {
+                if (closestPoint.t1 == null || closestPoint.t1 > info.t1) {
+                    closestPoint.x = info.x;
+                    closestPoint.y = info.y;
+                    closestPoint.t1 = info.t1;
+                }
+            }
+        }
+
+        // t1 is the distance, if there is no distance, something weird happened.
+        // Either way, just ignore the wall and move on.
+        if (closestPoint.t1 !== null) {
+            intersects.push({
+                x: Math.round(closestPoint.x),
+                y: Math.round(closestPoint.y)
+            });
+        }
+    }
+
+    return intersects;
+}
+</pre>
+</template>
+
+
+<template id="7">
+<p>
+Now that we're finished with those two lovely functions we can get back to the
+fun part, which is drawing stuff to the canvas. We'll start by redefining our
+draw function that we previously called in the mousemove handler.
+</p>
+
+<pre>
+function draw (pos) {
+    const poly = getLightPolygon(pos);
+    drawIntersectPoints(pos, poly);
+}
+
+drawIntersectPoints (pos, poly) {
+    const context = control_context;
+    clear(context);
+
+    context.save();
+        for (let i = 0; i < poly.length; ++i) {
+            context.beginPath();
+            context.moveTo(pos.x, pos.y);
+            context.lineTo(poly[i].x, poly[i].y);
+            context.strokeStyle = '#000000';
+            context.lineWidth = 1;
+            context.stroke();
+        }
+    context.restore();
+}
+</pre>
+</template>
+
+
+<template id="8">
+<p>
+Now we're going to draw the important shape, the polygon created by connecting all the
+intersect points.
+</p>
+
+<pre>
+function draw () {
+    const poly = getLightPolygon(pos);
+    drawIntersectPoints(pos, poly);
+    drawLightPolyOutline(poly);
+}
+
+drawLightPolyOutline (poly) {
+    const context = control_context;
+    clear(context);
+
+    context.save();
+        context.beginPath();
+        context.moveTo(poly[0].x, poly[0].y);
+        // Start at one since we just did moveTo on that point
+        // Go through and connect all the points.
+        for (let i = 1; i < poly.length; ++i) {
+            context.lineTo(poly[i].x, poly[i].y);
+        }
+        context.strokeStyle = '#FF0000';
+        context.lineWidth = 4;
+        context.stroke();
+    context.restore();
+}
+</pre>
+</template>
+
+
+<template id="9">
+<p>
+With the intersect points being generated, now we add our shadow canvas layer.
+The shadow layer will sit above the image but below the wall and control canvas. I put it below the walls so that we can still
+see them clearly for debugging purposes.
+<br /><br /><b>IMAGE -> SHADOW -> WALL -> CONTROL</b><br />
+</p>
+<p>
+Let's fill the shadow layer with a slightly transparent color so we can see
+behind it, this is just to make sure everything is working properly. In the end
+we'll make it fully opaque so we can't see through it.
+
+Every other canvas up to this point has been cleared before we draw to it so it doesn't
+show any old data. We won't do that for the shadow layer. It will be filled with our shadow
+color at the start of the application and then our light will cut it's light polygon
+out of the the shadow layer to show what's behind it.
+</p>
+<pre>
+function drawShadow () {
+    const context = shadow_context;
+    context.save();
+        context.globalAlpha = 0.7;
+        context.beginPath();
+        context.rect(0, 0, context.width, context.height);
+        context.fillStyle = '#000000';
+        context.fill();
+    context.restore();
+}
+</pre>
+<p>
+We'll once again update our draw function to add a new drawing method
+</p>
+<pre>
+function draw () {
+    const poly = getLightPolygon(pos);
+    drawIntersectPoints(pos, poly);
+    drawLightPolyOutline(poly);
+    drawLightPolygon(shadow_context, poly);
+}
+
+function drawLightPolygon (context, poly) {
+    // No clear at the beginning of this draw method
+    context.save();
+        context.beginPath();
+        context.moveTo(poly[0].x, poly[0].y);
+        for (let i = 1; i < poly.length; ++i) {
+            context.lineTo(poly[i].x, poly[i].y);
+        }
+        context.fillStyle = rgba(0, 0, 0, 1);
+        context.globalCompositeOperation = "destination-out";
+        context.fill();
+    context.restore();
+    context.globalCompositeOperation = "source-over";
+}
+</pre>
+<p>
+Pretty straightforward for what we've done so far except for two big changes...
+</p>
+<pre>
+context.globalCompositeOperation = "destination-out";
+context.globalCompositeOperation = "source-over";
+</pre>
+<p>
+<code>"source-over"</code> is the default drawing method. The context restore will reset it
+but I also like to set it explicitly.
+</p>
+<p>
+<code>"destination-out"</code> is how we'll remove our polygon from the shadow layer.
+</p>
+<p>
+<code>globalCompositeOperation</code> uses two main targets: "source" and "destination".
+</p>
+<p>
+"source" is what we are currently drawing. It's the shapes
+or lines before we do a "stroke" or "fill" operation to actually draw it to the canvas.
+</p>
+<p>
+"destination" is the canvas we are drawing to.
+</p>
+<p>
+We can read the two <code>globalCompositeOperation</code> options like so:
+<br />
+<code>"source-over"</code>: Take the shapes defined and add them over/ontop of what's already there.
+<br />
+<code>"destination-out"</code>: Take the shapes defined and cut them out of the destination canvas.
+</p>
+</template>
+
+
+<template id="10">
+<p>
+In the previous example, When you move the mouse around to light up the area, you'll notice
+a lot of cutting into walls, especially as the light rays get further out
+and more separated.
+</p>
+<p>
+We've been using a low light fidelity so it's easy to see all the intersect
+points clearly, but now we can start to bump it up to improve our lighting
+accuracy. Let's bump it up to 720 and see what we get.
+</p>
+<pre>
+const angle_amount = 720;
+</pre>
+<p>
+Now it's starting to look pretty good. Performace is still pretty good
+even though we're still drawing all our debug data.
+</p>
+</template>
+
+
+<template id="11">
+<p>
+I personally like 720, but let's go ahead and bump it up some more
+to see what we get.
+</p>
+<pre>
+const angle_amount = 1440;
+</pre>
+<p>
+There is definitely an improvement, but it starts to become less practical.
+In realistic use cases, the small amounts of corner cutting we get with 720
+will be unnoticeable, especially once we start removing the debug drawing.
+</p>
+</template>
+
+<template id="12">
+<p>
+Taking it up a notch one more time...
+</p>
+<pre>
+const angle_amount = 2880;
+</pre>
+<p>
+It's certainly pretty, but we can start to see how there is really no appreciable
+increase in accuracy.
+</p>
+</template>
+
+
+<template id="13">
+<p>
+At this point, unless stated otherwise, the fidelity of the
+light will be 720.
+</p>
+<p>
+At this point everything should be looking pretty good, and
+our intersection calculations should be working fine, so we can
+disable the debug drawing we're doing.
+</p>
+<pre>
+function draw () {
+    const poly = getLightPolygon(pos);
+    // drawIntersectPoints(pos, poly);
+    // drawLightPolyOutline(poly);
+    drawLightPolygon(shadow_context, poly);
+}
+</pre>
+</template>
+
+
+<template id="14">
+<p>
+Now we're going to add our last layer, the shroud layer. This will go between
+the image and shadow layer. We'll refresh it each time we draw, cutting out only what
+the lights currently show.
+<br /><br /><b>IMAGE -> SHROUD -> SHADOW -> WALL -> CONTROL</b><br />
+</p>
+<p>
+Since the shroud layer refreshes each draw, the previous parts that we could see
+with the light will now have a partially transparent cover to them, allowing us to
+still see what was uncovered before, but now shrouded.
+</p>
+<p>
+For the purposes of a RPG map application, this lets characters see where
+they've been while letting them know they don't have sight to it anymore.
+</p>
+<pre>
+function drawShroud () {
+    clear(context);
+    context.save();
+        context.globalAlpha = 0.5;
+        context.beginPath();
+        context.rect(0, 0, context.width, context.height);
+        context.fillStyle = '#000000';
+        context.fill();
+    context.restore();
+}
+
+function draw () {
+    const poly = getLightPolygon(pos);
+    // drawIntersectPoints(pos, poly);
+    // drawLightPolyOutline(poly);
+    drawShroud();
+    drawLightPolygon(shroud_context, poly);
+    drawLightPolygon(shadow_context, poly);
+}
+</pre>
+</template>
+
+
+<template id="15">
+<p>
+Some tabletop RPG games like D&D have a vision limit to the characters
+if the place they're in is dark, foggy, or not lit up entirely, like a cave or
+exploring someplace at night.
+</p>
+<p>
+Currently our light goes until it hits a wall, regardless of how far away it is.
+We're going to add some functionality to limit this, and only let characters see
+in a small circle around them.
+</p>
+<p>
+We'll be making an adjustment to the <code>getLightPolygon</code> function, down where
+we check to make sure our <code>closestPoint</code> found is valid. I'm going to hardcode
+light limits here, but it's best to add them in a more configurable location.
+</p>
+<pre>
+// Simple helper for getting a squared value
+function sqr (value) {
+    return value * value;
+};
+</pre>
+<pre>
+// Still inside getLightPolygon, but the rest of the function doesnt change
+if (closestPoint.t1 !== null) {
+    const bright_limit = 150; // 150 in pixels
+    // Get the distance between the light and the point found. We can use squared
+    // values because we don't need an accurate distance, just a comparison
+    const sqr_dist = sqr(light.x - closestPoint.x) + sqr(light.y - closestPoint.y);
+    if (sqr_dist > sqr(bright_limit)) {
+        // clamp the point
+        // bright_intersects is a new array defined alongside intersects
+        bright_intersects.push({
+            x: Math.round(light.x + (vector.x * vision.dim)),
+            y: Math.round(light.y + (vector.y * vision.dim))
+        });
+    } else {
+        bright_intersects.push({
+            x: Math.round(closestPoint.x),
+            y: Math.round(closestPoint.y)
+        });
+    }
+
+    intersects.push({
+        x: Math.round(closestPoint.x),
+        y: Math.round(closestPoint.y)
+    });
+}
+</pre>
+<pre>
+// We're also going to change our return value
+return {
+    intersects,
+    bright_intersects,
+};
+</pre>
+<p>
+Our draw function now needs to change to reflect the update return.
+We still have the original intersects array, but we won't use it here, for this example
+we just want our new <code>bright_intersects</code>.
+</p>
+<pre>
+function draw () {
+    const poly = getLightPolygon(pos).bright_intersects;
+    drawShroud();
+    drawLightPolygon(shroud_context, poly);
+    drawLightPolygon(shadow_context, poly);
+}
+</pre>
+</template>
+
+
+<template id="16">
+<p>
+Another vision aspect to some tabletop games is having dim vision. This is what you can see
+past you're main vision limit, but not 100% clearly. We're going to use the exact same logic for
+the clamping but add another check for another value and create another array.
+</p>
+<pre>
+if (closestPoint.t1 !== null) {
+    const bright_limit = 150; // 150 in pixels
+    const dim_limit = 450; // 450 pixels
+
+    const sqr_dist = sqr(light.x - closestPoint.x) + sqr(light.y - closestPoint.y);
+    if (sqr_dist > sqr(bright_limit)) {
+        bright_intersects.push({
+            x: Math.round(light.x + (vector.x * bright_limit)),
+            y: Math.round(light.y + (vector.y * bright_limit))
+        });
+    } else {
+        bright_intersects.push({
+            x: Math.round(closestPoint.x),
+            y: Math.round(closestPoint.y)
+        });
+    }
+
+    if (sqr_dist > sqr(dim_limit)) {
+        dim_intersects.push({
+            x: Math.round(light.x + (vector.x * dim_limit)),
+            y: Math.round(light.y + (vector.y * dim_limit))
+        });
+    } else {
+        dim_intersects.push({
+            x: Math.round(closestPoint.x),
+            y: Math.round(closestPoint.y)
+        });
+    }
+
+    intersects.push({
+        x: Math.round(closestPoint.x),
+        y: Math.round(closestPoint.y)
+    });
+}
+</pre>
+<pre>
+// Update our return to include the dim vision array
+return {
+    intersects,
+    bright_intersects,
+    dim_intersects,
+};
+</pre>
+<p>
+Update our draw again to use our dim vision array
+</p>
+<pre>
+function draw () {
+    const polys = getLightPolygon(pos);
+    drawShroud();
+    drawLightPolygon(shroud_context, polys.bright_intersects);
+    drawLightPolygon(shadow_context, poly.dim_intersects);
+}
+</pre>
+<p>
+We want to cut the small polygon (bright vision) out of the shroud, and the
+larger (dim vision) from the shadow layer.
+</p>
+</template>
+
+
+<template id="17">
+<p>
+Let's bump the fidelity back up to 2880.
+</p>
+<p>
+One benefit of the limited vision is that the rays we cast from the light
+don't go as far, so the increasing separation between the rays won't come into
+play in regards to cutting off far away corners.
+</p>
+<p>
+We can see here that the 4x bump in light fidelity has practically zero effect.
+</p>
+</template>
+
+
+<template id="18">
+<p>
+Let's bump the fidelity down up to 360.
+</p>
+<p>
+We can see some of the corner cutting coming back, but its still very minimal.
+a fidelity of 360 is definitely acceptable if we're going to use the limited vision.
+</p>
+</template>
+
+
+<template id="19">
+<p>
+You'll notice this example is completely dark. This is because I've adjusted the shadow
+and shroud alphas to 1 and 0.9 respectively. I've also changed the map to be something
+more real that has a lot more walls (850 walls vs 42 in the previous examples).
+</p>
+<p>
+What we have is well and good, assuming we just have to manage light for one character.
+In D&D however, parties split up or characters are an appreciable distance apart that we really
+want multiple lights to help light up our map accurately for each character. I'm not going to show
+any code for handling multiple lights, it should be pretty straightforward. The biggest change will
+be most of our drawing functions now having an outside loop to go over an array of manage lights.
+</p>
+<p>
+Left clicking on the map will add a light at that spot.
+Right clicking will remove all lights and reset the shadow/shroud layers.
+*These work on previous example as well
+</p>
+<p>
+We can see a decrease in performance when we start to add around 5-10 lights.
+This is because everytime a light moves, it calculates the light polygons for each
+light, even the ones that aren't moving. We can handle this easily by having the lights
+that we manage all keep a copy of the last light polygon they had. If the light doesnt move
+it uses its old values, and any moving lights will use a newly calculate polygon.
+</p>
+</template>
+
+
+<template id="20">
+<p>
+If we add the same amount of lights now we can see that the performance barely drops.
+</p>
+</template>
+
+
+<template id="21">
+<p>
+We can further get a massive performance increase by splitting up the walls into four
+quadrants: Top Left, Top Right, Bottom Left, Bottom Right.
+</p>
+<p>
+Any segment that crosses between quadrants goes into both quandrant lists. Having duplicate
+walls won't hurt light calculations at all and having a few duplicates to check against
+is fine for the performance gain we'll get.
+</p>
+<p>
+Our array of light rays to cast will also be split up. Rays that go up to the left will go
+in a separate array, and the same for the other directions.
+</p>
+<p>
+The idea behind this separation is that if we have a light located in the top left quadrant and are
+testing a light ray that goes in the top left direction, we only need to check the walls in the top left quadrant.
+</p>
+<p>
+The counter to this is that if we have a light located in the top left quadrant and are
+testing a light ray that goes in the bottom right direction, we have to check all quadrants. This is fine though
+since it's basically what we had before.
+</p>
+<p>
+We get a massive performance increase here because ths guarantees we won't check all walls
+</p>
+<div class="image">
+    <img src="./assets/quadrants.png" />
+</div>
+<p>
+Looking at the image we can make the following conclusions:
+<ul>
+    <li>Light rays in section 1 only need to test Top Left and Top Right quadrants</li>
+    <li>Light rays in section 2 need to check all 4 quadrants</li>
+    <li>Light rays in section 3 only need to check Top Left and Bottom Left quadrants</li>
+    <li>Light rays in section 4 only need to test the Top Left quadrant</li>
+</ul>
+</p>
+<p>
+Now instead of testing:
+<br/>
+4/4 + 4/4 + 4/4 + 4/4 = 16/16 or 100%
+<br/>
+we end up testing:
+<br/>
+2/4 + 4/4 + 2/4 + 1/4 =  9/16 or 56%
+</p>
+<p>
+We now end up only testing a little over half the intersection checks we had
+to before, which depending on the map being used, can be thousands of walls.
+</p>
+</template>
+
+
+<template id="welcome">
+<p>
+Welcome to my tutorial on how to make a simple lighting application
+for use with tabletop games.
+</p>
+
+<p>
+We'll be using the 2D context instead of WebGL. WebGL is of course capable
+of doing whatever we want, but is more complicated and I'm fond of the 2D context
+simplicity and wanted to see if this could be done using that.
+</p>
+</template>
+
+    <script src="./base.js"></script>
+</html>
