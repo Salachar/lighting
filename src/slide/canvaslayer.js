@@ -10,24 +10,57 @@ class CanvasLayer {
 
         this.vel = 1;
         this.pos = 0;
+
+        this.loaded = 0;
     }
 
     show () {
-        this.img = new Image;
-        this.img.onload = () => {
-            this.width = this.container.clientWidth;
-            this.height = this.container.clientHeight;
-
-            this.resize(this.canvas_lone);
-            this.resize(this.canvas_bot);
-            this.resize(this.canvas_top);
-            if (this.example === 'good') {
-                this.context_bot.drawImage(this.img, 0, 0, this.width, this.height);
-            }
-
-            this.start();
+        this.img1 = new Image;
+        this.img1.onload = () => {
+            this.loaded += 1;
+            this.allLoaded();
         }
-        this.img.src = './assets/4k.jpg';
+        this.img1.src = './assets/4k.jpg';
+
+        this.img2 = new Image;
+        this.img2.onload = () => {
+            this.loaded += 1;
+            this.allLoaded();
+        }
+        this.img2.src = './assets/4k2.jpg';
+
+        this.img3 = new Image;
+        this.img3.onload = () => {
+            this.loaded += 1;
+            this.allLoaded();
+        }
+        this.img3.src = './assets/4k3.jpg';
+
+        this.img4 = new Image;
+        this.img4.onload = () => {
+            this.loaded += 1;
+            this.allLoaded();
+        }
+        this.img4.src = './assets/4k4.jpg';
+    }
+
+    allLoaded () {
+        if (this.loaded < 4) return;
+        this.width = this.container.clientWidth;
+        this.height = this.container.clientHeight;
+
+        this.resize(this.canvas_lone);
+        this.resize(this.canvas_bot);
+        this.resize(this.canvas_top);
+
+        if (this.example === 'good') {
+            this.context_bot.drawImage(this.img1, 0, 0, this.width / 2, this.height / 2);
+            this.context_bot.drawImage(this.img2, this.width / 2, 0, this.width / 2, this.height / 2);
+            this.context_bot.drawImage(this.img3, 0, this.height / 2, this.width / 2, this.height / 2);
+            this.context_bot.drawImage(this.img4, this.width / 2, this.height / 2, this.width / 2, this.height / 2);
+        }
+
+        this.start();
     }
 
     hide () {
@@ -68,7 +101,11 @@ class CanvasLayer {
     drawBad () {
         window.requestAnimationFrame(() => {
             this.context_lone.clearRect(0, 0, this.width, this.height);
-            this.context_lone.drawImage(this.img, 0, 0, this.width, this.height);
+            // this.context_lone.drawImage(this.img, 0, 0, this.width, this.height);
+            this.context_lone.drawImage(this.img1, 0, 0, this.width / 2, this.height / 2);
+            this.context_lone.drawImage(this.img2, this.width / 2, 0, this.width / 2, this.height / 2);
+            this.context_lone.drawImage(this.img3, 0, this.height / 2, this.width / 2, this.height / 2);
+            this.context_lone.drawImage(this.img4, this.width / 2, this.height / 2, this.width / 2, this.height / 2);
             this.drawSpot(this.context_lone);
         });
     }
