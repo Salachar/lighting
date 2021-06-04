@@ -7,14 +7,16 @@ class CanvasLayer {
         this.render();
 
         this.timer = null;
-
         this.vel = 1;
         this.pos = 0;
-
         this.loaded = 0;
     }
 
     show () {
+        clearInterval(this.timer);
+        this.timer = null;
+        this.vel = 1;
+        this.pos = 0;
         this.loaded = 0;
 
         this.img1 = new Image;
