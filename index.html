@@ -111,8 +111,8 @@ function clear (context) {
 <template id="walls">
 <p>
 Now we need to add some walls. We'll start by creating an array
-to hold our wall objects. The below is just a sample, every other wall will
-be included using the same structure.
+to hold our wall objects. The below is just a sample, the example uses
+more that follow the same structure.
 </p>
 <pre>
 const walls = [
@@ -180,8 +180,8 @@ for (let i = 0; i < angle_amount; ++i) {
 </pre>
 <p>
 It's also best to go over the newly created vectors and polish some of them up.
-Near vertical/horizontal vectors can have some crazy small values that can affect
-some of the calculations.
+The vertical unit vectors sometimes aren't perfect (<code>{x: 6.123233995736766e-17, y: 1}</code>)
+and part of the intersection calculation fails for these.
 </p>
 <pre>
 for (let i = 0; i < angle_lookup.length; ++i) {
@@ -285,6 +285,7 @@ function getIntersection (r, s) {
     if ((r.dx / r.dy) == (s.dx / s.dy)) return null;
 
     const t2 = (r.dx * (s.py - r.py) + r.dy * (r.px - s.px)) / (s.dx * r.dy - s.dy * r.dx);
+    // This calculation fails if the angles arent corrected/polished
     const t1 = (r.dx != 0) ? (s.px + s.dx * t2 - r.px) / r.dx : (s.py + s.dy * t2 - r.py) / r.dy;
 
     return {

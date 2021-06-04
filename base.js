@@ -1536,7 +1536,7 @@ class CanvasLayer {
     start () {
         this.timer = setInterval(() => {
             this.update();
-        }, 0);
+        }, 1);
     }
 
     resize (canvas) {
@@ -1566,7 +1566,6 @@ class CanvasLayer {
     drawBad () {
         window.requestAnimationFrame(() => {
             this.context_lone.clearRect(0, 0, this.width, this.height);
-            // this.context_lone.drawImage(this.img, 0, 0, this.width, this.height);
             this.context_lone.drawImage(this.img1, 0, 0, this.width / 2, this.height / 2);
             this.context_lone.drawImage(this.img2, this.width / 2, 0, this.width / 2, this.height / 2);
             this.context_lone.drawImage(this.img3, 0, this.height / 2, this.width / 2, this.height / 2);
@@ -1583,10 +1582,13 @@ class CanvasLayer {
     }
 
     drawSpot (context) {
-        context.beginPath();
-        context.rect(this.pos, (this.height / 2) - 50, 100, 100);
-        context.fillStyle = '#FFFFFF';
-        context.fill();
+        context.save();
+            context.globalAlpha = 0.5;
+            context.beginPath();
+            context.rect(this.pos, (this.height / 2) - 50, 100, 100);
+            context.fillStyle = '#FFFFFF';
+            context.fill();
+        context.restore();
     }
 
     render () {
