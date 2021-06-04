@@ -1476,6 +1476,8 @@ class CanvasLayer {
     }
 
     show () {
+        this.loaded = 0;
+
         this.img1 = new Image;
         this.img1.onload = () => {
             this.loaded += 1;
