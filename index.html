@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <title>GM Kit</title>
+        <title>Lighting Demo</title>
         <link rel="stylesheet" href="./style.css"></link>
     </head>
 
@@ -61,13 +61,14 @@ const height = context.canvas.height || context.canvas.clientHeight || 0;
 </template>
 
 
-<template id="4">
+<template id="layers">
+<p>Using the canvas in layers is crucial to maintain any sort of performance.</p>
 <p>
-Canvas layers are something that we'll be using throughout, with future slides
-mentioning when we're creating a new one.
+While the 2D context is pretty fast at drawing, redrawing everything everytime we need to add/remove
+something will slow it down drastically.
 </p>
 <p>
-Canvas layers should stacked on top of each other, using whichever method you want.
+Canvas layers need to be stacked on top of each other, using whichever method you want.
 I tend to stick to positioning them absolute inside of a wrapper, and using z-index to layer them.
 Each time a new layer is added, the order will be explicitly called out.
 </p>
@@ -107,7 +108,7 @@ function clear (context) {
 </template>
 
 
-<template id="2">
+<template id="walls">
 <p>
 Now we need to add some walls. We'll start by creating an array
 to hold our wall objects. The below is just a sample, every other wall will
@@ -885,10 +886,9 @@ to before, which depending on the map being used, can be thousands of walls.
 
 <template id="welcome">
 <p>
-Welcome to my tutorial on how to make a simple lighting application
+Welcome to my tutorial on how to make a simple(ish?) lighting application
 for use with tabletop games.
 </p>
-
 <p>
 We'll be using the 2D context instead of WebGL. WebGL is of course capable
 of doing whatever we want, but is more complicated and I'm fond of the 2D context

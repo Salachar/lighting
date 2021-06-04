@@ -33,12 +33,21 @@ class LightingApp {
                 },
             },
             {
-                title: 'canvas layers',
-                template: 4,
+                title: 'layers',
+                template: 'layers',
+                // example: 'canvaslayer',
             },
             {
-                title: 'adding walls',
-                template: 2,
+                title: 'layers example (bad)',
+                example: 'canvaslayer_bad',
+            },
+            {
+                title: 'layers example (good)',
+                example: 'canvaslayer_good',
+            },
+            {
+                title: 'walls',
+                template: 'walls',
                 map: {
                     image: 'graph.png',
                     walls: walls_graph,

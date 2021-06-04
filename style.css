@@ -104,6 +104,11 @@ code {
     grid-template-rows: 1fr;
     grid-template-areas: "slide_information";
 }
+.slide.only_example {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr;
+    grid-template-areas: "slide_example";
+}
 .slide_information {
     grid-area: slide_information;
     /* padding: 2rem; */
@@ -142,11 +147,29 @@ code {
     position: relative;
     overflow: scroll;
 }
-.slide_example canvas {
+.slide_example .map_canvas {
     cursor: crosshair;
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
+}
+
+
+.canvaslayer_canvas_lone {
+    /* width: 100%;
+    height: 50%; */
+}
+.canvaslayer_wrapper {
+    position: relative;
+    /* width: 100%;
+    height: 50%; */
+}
+.canvaslayer_wrapper canvas {
+    /* width: 100%;
+    height: 100%; */
+    position: absolute;
+    top: 0;
+    left: 0;
 }
